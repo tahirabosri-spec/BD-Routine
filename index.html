@@ -459,8 +459,9 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .login-bg{
   position:fixed;inset:0;
   background:var(--header-bg);
-  display:flex;align-items:center;justify-content:center;
-  padding:20px;z-index:9999;
+  display:flex;justify-content:center;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:28px 20px;z-index:9999;
   animation:fadeIn .3s ease;
 }
 .login-card{
@@ -469,6 +470,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   border-radius:20px;
   box-shadow:0 30px 80px rgba(0,0,0,.3);
   width:100%;max-width:420px;
+  margin:auto;
   animation:slideUp .4s cubic-bezier(.2,.7,.3,1);
 }
 .login-logo{
@@ -492,6 +494,21 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
   transition:var(--transition);
 }
 .login-card input:focus,.login-card select:focus{border-color:var(--primary);background:var(--surface)}
+/* 🆕 ইউনিফায়েড লগইন ("এক রিসেপশন ডেস্ক") */
+#loginScreen .uni-legacy{display:none !important}   /* পুরোনো প্যানেল লুকানো — DOM-এ থাকে, রেফারেন্স ভাঙে না */
+.uni-list{max-height:210px;overflow-y:auto;-webkit-overflow-scrolling:touch;border:1.5px solid var(--border);border-radius:10px;margin-top:5px;background:var(--surface-2)}
+.uni-row{display:flex;align-items:center;gap:9px;padding:9px 11px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
+.uni-row:last-child{border-bottom:0}
+.uni-row:hover{background:var(--surface)}
+.uni-row.active{background:rgba(15,118,110,.14)}
+.uni-row .sl{font-size:12px;color:var(--text-3,#94a3b8);min-width:24px;text-align:right;font-weight:600}
+.uni-row .nm{flex:1;font-size:14px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uni-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.uni-badge.admin{background:#fef3c7;color:#b45309}
+.uni-badge.manager{background:#dbeafe;color:#1d4ed8}
+.uni-badge.teacher{background:#dcfce7;color:#15803d}
+.uni-empty{font-size:12px;color:var(--text-3,#94a3b8);padding:9px 4px;line-height:1.55}
+.uni-selected{font-size:13px;color:var(--text-2);padding:7px 11px;background:rgba(15,118,110,.10);border:1px solid rgba(15,118,110,.25);border-radius:8px;margin-top:7px;font-weight:600}
 .login-btn{
   width:100%;padding:11px;
   background:var(--primary);color:#fff;
@@ -5616,8 +5633,18 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
     <div class="login-logo" id="loginLogo">রু</div>
     <div class="login-title" id="loginTitle">লালমোহন হা-মীম রেসিডেন্সিয়াল স্কুল এন্ড কলেজ</div>
     <div class="login-subtitle" id="loginSubtitle">রুটিন ম্যানেজমেন্ট সিস্টেম</div>
-    <!-- 🆕 প্রতিষ্ঠান লগইন (ফোন+পাসওয়ার্ড) + নতুন প্রতিষ্ঠান (Block 2/3) -->
-    <div id="orgLoginPanel" style="margin-bottom:14px">
+    <!-- 🆕 ইউনিফায়েড "এক রিসেপশন ডেস্ক" লগইন — সবাই (অ্যাডমিন/ম্যানেজার/শিক্ষক) একই জায়গা দিয়ে প্রবেশ করে।
+         role নিজে থেকে শনাক্ত হয়; পেছনে পুরোনো doLogin()/doOrgLogin() ইঞ্জিনই চলে। -->
+    <div class="field" id="uniLoginField">
+      <label>👤 কে প্রবেশ করছেন?</label>
+      <input id="uniSearch" type="text" autocomplete="off" placeholder="🔍 নাম / ফোন / সিরিয়াল নম্বর দিয়ে খুঁজুন" oninput="filterUniList(this.value)" onkeydown="if(event.key==='Enter')doUnifiedLogin()" style="width:100%;box-sizing:border-box">
+      <div id="uniList" class="uni-list"></div>
+      <div id="uniEmpty" class="uni-empty" style="display:none">কেউ পাওয়া যায়নি — নাম বা সিরিয়াল নম্বর মিলিয়ে দেখুন।<br>অন্য প্রতিষ্ঠানের অ্যাডমিন হলে এখানে <b>ফোন নম্বর</b> লিখে নিচে পাসওয়ার্ড দিয়ে প্রবেশ করুন।</div>
+      <div id="uniSelected" class="uni-selected" style="display:none"></div>
+    </div>
+
+    <!-- 🔁 পুরোনো প্যানেলগুলো CSS দিয়ে লুকানো (uni-legacy) — মুছিনি, কারণ কোডের নানা জায়গায় এদের রেফারেন্স আছে -->
+    <div id="orgLoginPanel" class="uni-legacy" style="margin-bottom:14px">
       <div class="field">
         <label>📱 ফোন নম্বর</label>
         <input id="orgLoginPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="যেমন: 017XXXXXXXX" onkeydown="if(event.key==='Enter')doOrgLogin()">
@@ -5635,7 +5662,7 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
       <div style="height:1px;background:var(--border,#e2e8f0);margin:10px 0"></div>
       <div style="text-align:center;font-size:12px;color:var(--text-3,#94a3b8);margin-bottom:4px">— অথবা এই ডিভাইসের প্রতিষ্ঠানে role দিয়ে —</div>
     </div>
-    <div class="field">
+    <div class="field uni-legacy" id="loginRoleField">
       <label>ভূমিকা নির্বাচন করুন</label>
       <select id="loginRole">
         <option value="admin">অ্যাডমিন (সম্পূর্ণ নিয়ন্ত্রণ)</option>
@@ -5643,15 +5670,15 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
         <option value="teacher" data-vocab-tpl="{member} (নিজস্ব রো)">শিক্ষক (নিজস্ব রো)</option>
       </select>
     </div>
-    <div class="field" id="accountSelectField" style="display:none">
+    <div class="field uni-legacy" id="accountSelectField" style="display:none">
       <label>নাম নির্বাচন করুন</label>
       <select id="loginAccountSelect" onchange="document.getElementById('loginPass').value=''"></select>
     </div>
-    <div class="field" id="usernameField" style="display:none">
+    <div class="field uni-legacy" id="usernameField" style="display:none">
       <label>ব্যবহারকারীর নাম (ম্যানুয়াল)</label>
       <input id="loginUser" type="text" autocomplete="username" placeholder="admin">
     </div>
-    <div class="field" id="teacherSelectField" style="display:none">
+    <div class="field uni-legacy" id="teacherSelectField" style="display:none">
       <label data-vocab-tpl="{member} নির্বাচন করুন">শিক্ষক নির্বাচন করুন</label>
       <input id="loginTeacherSearch" type="text" autocomplete="off" placeholder="🔍 নাম বা সিরিয়াল নম্বর দিয়ে খুঁজুন (যেমন: করিম বা ১২)" oninput="filterLoginTeachers(this.value)" style="margin-bottom:8px;width:100%;box-sizing:border-box">
       <select id="loginTeacher" size="6" onchange="document.getElementById('loginPass').value=''" style="width:100%;box-sizing:border-box"></select>
@@ -5659,9 +5686,9 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
     </div>
     <div class="field" id="passwordField">
       <label>পাসওয়ার্ড</label>
-      <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••" onkeydown="if(event.key==='Enter')doLogin()">
+      <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••" onkeydown="if(event.key==='Enter')doUnifiedLogin()">
     </div>
-    <button class="login-btn" onclick="doLogin()">প্রবেশ করুন</button>
+    <button class="login-btn" onclick="doUnifiedLogin()">প্রবেশ করুন</button>
     <div class="login-error" id="loginError"></div>
     <div style="text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border,#e2e8f0);font-size:13px">
       নতুন প্রতিষ্ঠান খুলবেন? <a href="javascript:void(0)" onclick="openOrgCreate()" style="color:var(--primary,#0f766e);font-weight:700;text-decoration:underline">✨ এখানে তৈরি করুন</a>
@@ -11085,6 +11112,13 @@ function logout(){
   document.getElementById('appRoot').style.display = 'none';
   document.getElementById('loginPass').value = '';
   document.getElementById('loginError').classList.remove('show');
+  // 🆕 ইউনিফায়েড লগইন রিসেট ও তালিকা রিফ্রেশ
+  try{
+    window._uniPick = null;
+    const us = document.getElementById('uniSearch'); if(us) us.value = '';
+    const usd = document.getElementById('uniSelected'); if(usd){ usd.style.display = 'none'; usd.innerHTML = ''; }
+    if(typeof populateUniList === 'function') populateUniList();
+  }catch(_){}
 }
 /* ===========================================================
    PERMISSION & ROLE HELPERS  (Master Lock system removed)
@@ -11184,6 +11218,141 @@ function populateLoginAccounts(role){
    সিরিয়াল = state.teachers-এর ক্রম অনুসারে ১-ভিত্তিক নম্বর (টেবিলের SL-এর মতো)। */
 function filterLoginTeachers(q){
   populateLoginTeachers(q);
+}
+
+/* ===========================================================
+   🆕 ইউনিফায়েড লগইন ("এক রিসেপশন ডেস্ক")
+   সবাই একই জায়গা দিয়ে প্রবেশ করে; role নিজে থেকে শনাক্ত হয়।
+   কোনো নতুন যাচাই-লজিক নেই — তালিকা থেকে বাছাই করলে পুরোনো,
+   পরীক্ষিত doLogin()-কেই চালানো হয় (admin/manager/teacher শাখা)।
+   অন্য প্রতিষ্ঠানের অ্যাডমিন ফোন নম্বর দিলে → পুরোনো doOrgLogin()।
+=========================================================== */
+
+/* বর্তমান প্রতিষ্ঠানের সব মানুষ একত্রে: অ্যাডমিন + ম্যানেজার + শিক্ষক */
+function _uniPeople(){
+  const out = [];
+  try{ if(typeof ensureAccounts === 'function') ensureAccounts(); }catch(_){}
+  const acc = (state && state.accounts && typeof state.accounts === 'object') ? state.accounts : {};
+  const admins   = Array.isArray(acc.admins)   ? acc.admins   : [];
+  const managers = Array.isArray(acc.managers) ? acc.managers : [];
+  const teachers = Array.isArray(state && state.teachers) ? state.teachers : [];
+  admins.forEach(a => { if(a && a.username) out.push({ role:'admin',   key:String(a.username), name:(a.name||a.username||''), phone:String(a.phone||a.username||''), sl:'' }); });
+  managers.forEach(a => { if(a && a.username) out.push({ role:'manager', key:String(a.username), name:(a.name||a.username||''), phone:String(a.phone||''), sl:'' }); });
+  teachers.forEach((t, i) => { if(t && t.id) out.push({ role:'teacher', key:String(t.id), name:(t.name||''), phone:String(t.phone||''), sl:(i+1) }); });
+  return out;
+}
+
+/* মিলিত তালিকা রেন্ডার — নাম / ফোন / সিরিয়াল দিয়ে ফিল্টার, পাশে role-ব্যাজ */
+function populateUniList(query){
+  const list = document.getElementById('uniList');
+  if(!list) return;
+  const q = (query == null ? ((document.getElementById('uniSearch')||{}).value || '') : String(query)).trim();
+  const bnToEn = s => String(s).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+  const qn = bnToEn(q).toLowerCase();
+  const qd = qn.replace(/[^0-9]/g, '');
+  let people = _uniPeople();
+  if(q){
+    people = people.filter(p => {
+      const nameHit  = (p.name || '').toLowerCase().includes(q.toLowerCase());
+      const phoneHit = qd !== '' && String(p.phone || '').includes(qd);
+      const slHit    = qd !== '' && p.sl !== '' && (String(p.sl) === qd || String(p.sl).startsWith(qd));
+      return nameHit || phoneHit || slHit;
+    });
+  }
+  const pick = window._uniPick || null;
+  const badge = { admin:'👑 অ্যাডমিন', manager:'🛠️ ম্যানেজার', teacher:'👤 শিক্ষক' };
+  list.innerHTML = people.map(p => {
+    const active = pick && pick.role === p.role && String(pick.key) === String(p.key);
+    return `<div class="uni-row${active?' active':''}" data-role="${p.role}" data-key="${esc(String(p.key))}" data-name="${esc(p.name||'')}" onclick="selectUniRow(this)">`
+      + `<span class="sl">${p.sl !== '' ? toBnNum(p.sl) : ''}</span>`
+      + `<span class="nm">${esc(p.name || '(নামহীন)')}</span>`
+      + `<span class="uni-badge ${p.role}">${badge[p.role] || ''}</span>`
+      + `</div>`;
+  }).join('');
+  const empty = document.getElementById('uniEmpty');
+  if(empty) empty.style.display = people.length ? 'none' : 'block';
+}
+
+/* সার্চ বক্সে টাইপ করলে — আগের নির্বাচন বাতিল করে নতুন তালিকা দেখাই */
+function filterUniList(q){
+  window._uniPick = null;
+  const sel = document.getElementById('uniSelected');
+  if(sel){ sel.style.display = 'none'; sel.innerHTML = ''; }
+  populateUniList(q);
+}
+
+/* তালিকা থেকে একজন বাছাই — role+key মনে রাখি, পাসওয়ার্ডে ফোকাস */
+function selectUniRow(el){
+  if(!el) return;
+  const role = el.dataset.role, key = el.dataset.key, name = el.dataset.name || '';
+  window._uniPick = { role, key, name };
+  const list = document.getElementById('uniList');
+  if(list) list.querySelectorAll('.uni-row').forEach(r => r.classList.toggle('active', r === el));
+  const sel = document.getElementById('uniSelected');
+  if(sel){ sel.style.display = 'block'; sel.innerHTML = '✓ নির্বাচিত: <b>' + esc(name) + '</b> — এখন পাসওয়ার্ড দিন'; }
+  const p = document.getElementById('loginPass');
+  if(p){ p.value = ''; try{ p.focus(); }catch(_){} }
+}
+
+/* ইউনিফায়েড প্রবেশ — বাছাই থাকলে পুরোনো doLogin(); ফোন নম্বর হলে doOrgLogin() */
+function doUnifiedLogin(){
+  const errEl = document.getElementById('loginError');
+  if(errEl){ errEl.textContent = ''; errEl.classList.remove('show'); }
+  const q = ((document.getElementById('uniSearch')||{}).value || '').trim();
+  let pick = window._uniPick || null;
+
+  // বাছাই না থাকলে: ফিল্টার করা তালিকায় ঠিক একজন থাকলে স্বয়ংক্রিয় বাছাই
+  if(!pick){
+    const rows = document.querySelectorAll('#uniList .uni-row');
+    if(rows.length === 1){
+      const el = rows[0];
+      pick = { role: el.dataset.role, key: el.dataset.key, name: el.dataset.name || '' };
+    }
+  }
+
+  if(pick){
+    const role = pick.role, key = pick.key;
+    const lr = document.getElementById('loginRole');
+    if(lr) lr.value = role;
+    if(role === 'admin' || role === 'manager'){
+      // accountSelectField লুকানো রাখি → doLogin() loginUser ফিল্ড পড়বে (usingDropdown=false)
+      const acctField = document.getElementById('accountSelectField');
+      if(acctField) acctField.style.display = 'none';
+      const lu = document.getElementById('loginUser');
+      if(lu) lu.value = key;
+    } else if(role === 'teacher'){
+      const lt = document.getElementById('loginTeacher');
+      if(lt){
+        // অপশনটি না থাকলে যোগ করি, তারপর নির্বাচন করি
+        if(!Array.prototype.some.call(lt.options, o => o.value === key)){
+          const o = document.createElement('option');
+          o.value = key; o.textContent = pick.name || key;
+          lt.appendChild(o);
+        }
+        lt.value = key;
+      }
+    }
+    // loginPass শেয়ার্ড পাসওয়ার্ড ফিল্ড — doLogin() এটাই পড়ে
+    try{ doLogin(); }
+    catch(e){ console.warn('unified login error:', e); if(errEl){ errEl.textContent = '⚠️ প্রবেশে সমস্যা — আবার চেষ্টা করুন'; errEl.classList.add('show'); } }
+    return;
+  }
+
+  // বাছাই নেই — টাইপ করা মান ফোন নম্বর হলে: অন্য প্রতিষ্ঠানের অ্যাডমিন হিসেবে চেষ্টা
+  const digits = String(q).replace(/[^0-9]/g, '');
+  if(digits.length >= 6){
+    const op  = document.getElementById('orgLoginPhone');
+    const opp = document.getElementById('orgLoginPass');
+    if(op)  op.value  = digits;
+    if(opp) opp.value = (document.getElementById('loginPass')||{}).value || '';
+    try{ doOrgLogin(); }catch(e){ console.warn('org login error:', e); }
+    return;
+  }
+
+  if(errEl){
+    errEl.textContent = '👆 তালিকা থেকে আপনার নাম বাছাই করুন — অথবা অন্য প্রতিষ্ঠানের অ্যাডমিন হলে ফোন নম্বর লিখুন';
+    errEl.classList.add('show');
+  }
 }
 
 /* ===========================================================
@@ -12245,6 +12414,8 @@ function populateLoginTeachers(query){
   if(list.length){
     sel.selectedIndex = 0;            // প্রথম মিলটি স্বয়ংক্রিয় নির্বাচিত
   }
+  // 🆕 ডেটা সিঙ্ক/পরিবর্তনে ইউনিফায়েড তালিকাও তাজা রাখি (লগইন স্ক্রিনে থাকলে)
+  try{ if(typeof populateUniList === 'function') populateUniList(); }catch(_){}
 }
 
 /* ===========================================================
@@ -26146,6 +26317,8 @@ function init(){
 
   // Trigger initial role change for login form
   document.getElementById('loginRole').dispatchEvent(new Event('change'));
+  // 🆕 ইউনিফায়েড লগইন তালিকা প্রথমবার ভরাট
+  try{ if(typeof populateUniList === 'function') populateUniList(); }catch(_){}
 
   // 🆕 পাবলিক ভিউ (Block 5) — ?org= / ?school= থাকলে লগইন ছাড়াই শুধু-দেখার মোড।
   //    এটি true হলে setup screen ও auto-login দুটোই স্কিপ — ব্যবহারকারী সরাসরি রুটিন দেখবে।
