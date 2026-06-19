@@ -5639,7 +5639,7 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
       <select id="loginRole">
         <option value="admin">অ্যাডমিন (সম্পূর্ণ নিয়ন্ত্রণ)</option>
         <option value="manager" selected>ম্যানেজার (এডিট অ্যাক্সেস)</option>
-        <option value="teacher">শিক্ষক (নিজস্ব রো)</option>
+        <option value="teacher" data-vocab-tpl="{member} (নিজস্ব রো)">শিক্ষক (নিজস্ব রো)</option>
       </select>
     </div>
     <div class="field" id="accountSelectField" style="display:none">
@@ -5651,7 +5651,7 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
       <input id="loginUser" type="text" autocomplete="username" placeholder="admin">
     </div>
     <div class="field" id="teacherSelectField" style="display:none">
-      <label>শিক্ষক নির্বাচন করুন</label>
+      <label data-vocab-tpl="{member} নির্বাচন করুন">শিক্ষক নির্বাচন করুন</label>
       <input id="loginTeacherSearch" type="text" autocomplete="off" placeholder="🔍 নাম বা সিরিয়াল নম্বর দিয়ে খুঁজুন (যেমন: করিম বা ১২)" oninput="filterLoginTeachers(this.value)" style="margin-bottom:8px;width:100%;box-sizing:border-box">
       <select id="loginTeacher" size="6" onchange="document.getElementById('loginPass').value=''" style="width:100%;box-sizing:border-box"></select>
       <div id="loginTeacherEmpty" style="display:none;font-size:12px;color:var(--text-3,#94a3b8);padding:6px 2px">কোনো শিক্ষক পাওয়া যায়নি — অন্য নাম বা সিরিয়াল নম্বর চেষ্টা করুন।</div>
@@ -5759,7 +5759,7 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
         </select>
         <div class="tool-divider admin-mgr-only"></div>
         <div class="tool-menu-panel-header">রুটিন তৈরির টুল</div>
-        <button class="tool-btn editable-only" data-perm="manageTeachers" onclick="addTeacher();closeToolMenu()">➕ <span class="lbl">শিক্ষক যোগ করুন</span></button>
+        <button class="tool-btn editable-only" data-perm="manageTeachers" onclick="addTeacher();closeToolMenu()">➕ <span class="lbl" data-vocab-tpl="{member} যোগ করুন">শিক্ষক যোগ করুন</span></button>
         <button class="tool-btn editable-only" onclick="undo();closeToolMenu()" id="undoBtn" disabled>↩️ <span class="lbl">আনডু</span></button>
         <button class="tool-btn editable-only" onclick="redo();closeToolMenu()" id="redoBtn" disabled>↪️ <span class="lbl">রিডু</span></button>
         <div class="tool-divider"></div>
@@ -6306,6 +6306,12 @@ body[data-role="teacher"] .dashboard-fab{display:none !important}
       <h3 style="margin:0 0 8px;font-size:13px">প্রতিষ্ঠাতা ও পরিচালক</h3>
       <div class="field"><label>প্রতিষ্ঠাতার নাম</label><input id="bFounder" type="text"></div>
       <div class="field"><label>পরিচালকের নাম</label><input id="bPrincipal" type="text"></div>
+      <div class="divider"></div>
+      <h3 style="margin:0 0 4px;font-size:13px">🏷️ শব্দভাণ্ডার <span style="font-weight:400;font-size:11px;color:var(--text-3,#94a3b8)">(অফিস/আদালতের জন্য — খালি রাখলে স্কুল-ডিফল্ট)</span></h3>
+      <div class="field"><label>সদস্যের শব্দ (যেমন: শিক্ষক / কর্মী / কর্মকর্তা)</label><input id="bVocMember" type="text" placeholder="শিক্ষক"></div>
+      <div class="field"><label>গ্রুপের শব্দ (যেমন: শ্রেণি / বিভাগ / এজলাস)</label><input id="bVocGroup" type="text" placeholder="শ্রেণি"></div>
+      <div class="field"><label>কাজের শব্দ (যেমন: বিষয় / দায়িত্ব / মামলা)</label><input id="bVocTask" type="text" placeholder="বিষয়"></div>
+      <div class="field"><label>শাখার শব্দ (যেমন: শাখা / টিম)</label><input id="bVocSection" type="text" placeholder="শাখা"></div>
     </div>
     <div class="modal-footer">
       <button class="tool-btn" onclick="closeModal('brandingModal')">বাতিল</button>
@@ -10731,6 +10737,36 @@ const ORG_VOCAB = {
   other:   {member:'সদস্য',       group:'গ্রুপ',   task:'কাজ',            section:'শাখা'}
 };
 
+/* 🆕 Phase 2 — শব্দভাণ্ডার getter ও প্রয়োগ।
+   state.vocabulary থেকে শব্দ নেয়, না থাকলে স্কুল-ডিফল্টে ফেরে।
+   এতে অফিস/আদালত "শিক্ষক/শ্রেণি/বিষয়"-এর বদলে নিজের শব্দ দেখবে। */
+const VOCAB_DEFAULTS = { member:'শিক্ষক', group:'শ্রেণি', task:'বিষয়', section:'শাখা' };
+function vocab(key){
+  try{
+    const v = (state && state.vocabulary) ? state.vocabulary[key] : '';
+    return (v && String(v).trim()) ? String(v).trim() : (VOCAB_DEFAULTS[key] || '');
+  }catch(_){ return VOCAB_DEFAULTS[key] || ''; }
+}
+
+/* data-vocab / data-vocab-tpl বিশিষ্ট element-গুলোর লেখা শব্দভাণ্ডার থেকে বসায়।
+   renderBranding()-এ ডাকা হয় (লোড ও সংরক্ষণ — দুই সময়েই)। */
+function applyVocabulary(){
+  try{
+    document.querySelectorAll('[data-vocab]').forEach(el=>{
+      const k = el.getAttribute('data-vocab');
+      if(k) el.textContent = vocab(k);
+    });
+    document.querySelectorAll('[data-vocab-tpl]').forEach(el=>{
+      let t = el.getAttribute('data-vocab-tpl') || '';
+      t = t.replace(/\{member\}/g, vocab('member'))
+           .replace(/\{group\}/g,  vocab('group'))
+           .replace(/\{task\}/g,   vocab('task'))
+           .replace(/\{section\}/g,vocab('section'));
+      el.textContent = t;
+    });
+  }catch(_){}
+}
+
 /* নতুন প্রতিষ্ঠানের জন্য পরিষ্কার ডিফল্ট state (LHRSC ডেটা ছাড়া) */
 function _freshOrgState(name){
   let settings;
@@ -11283,6 +11319,8 @@ function renderBranding(){
   if(hdr && b.headerGradient) hdr.style.background = b.headerGradient;
   if(b.headerGradient) document.documentElement.style.setProperty('--header-bg', b.headerGradient);
   document.title = (b.systemName||'রুটিন') + ' — ' + (b.schoolName||'');
+  // 🆕 Phase 2 — শব্দভাণ্ডার প্রয়োগ (অফিস/আদালত নিজের শব্দ দেখবে)
+  try{ applyVocabulary(); }catch(_){}
 }
 
 /* 🆕 একজন শিক্ষকের রুটিনে ইনপুট করা মোট ক্লাস।
@@ -11332,7 +11370,7 @@ function renderTable(){
   const nameLocked = headerLocked;
   const swapped = !!ss.slNameSwapped;
   const slLabel = ss.slLabel || 'SL';
-  const nameLabel = ss.nameLabel || 'শিক্ষকের নাম';
+  const nameLabel = ss.nameLabel || ((typeof vocab==='function' ? vocab('member') : 'শিক্ষক') + 'ের নাম');
   const canEditCorner = canFullEdit() && !isReadOnly && !routineLocked();
 
   // Inline style overrides for SL/Name
@@ -24017,6 +24055,15 @@ function saveBranding(){
     state.branding.logoImage = _pendingLogoImage;   // '' হলে ছবি সরানো হয়েছে
   }
   _pendingLogoImage = null;
+  // 🆕 Phase 2 — শব্দভাণ্ডার সংরক্ষণ (খালি ফিল্ড = স্কুল-ডিফল্টে ফিরবে)
+  try{
+    const gv = id => (document.getElementById(id) ? document.getElementById(id).value.trim() : '');
+    if(!state.vocabulary || typeof state.vocabulary !== 'object') state.vocabulary = {};
+    state.vocabulary.member  = gv('bVocMember');
+    state.vocabulary.group   = gv('bVocGroup');
+    state.vocabulary.task    = gv('bVocTask');
+    state.vocabulary.section = gv('bVocSection');
+  }catch(_){}
   saveState();
   renderBranding();
   closeModal('brandingModal');
@@ -25958,6 +26005,15 @@ function init(){
   document.getElementById('bGradient').value = state.branding.headerGradient;
   document.getElementById('bFounder').value = state.branding.founder || '';
   document.getElementById('bPrincipal').value = state.branding.principal || '';
+  // 🆕 Phase 2 — শব্দভাণ্ডার ফিল্ড prefill
+  try{
+    const vv = state.vocabulary || {};
+    const _sv = (id,val)=>{ const e=document.getElementById(id); if(e) e.value = val || ''; };
+    _sv('bVocMember',  vv.member);
+    _sv('bVocGroup',   vv.group);
+    _sv('bVocTask',    vv.task);
+    _sv('bVocSection', vv.section);
+  }catch(_){}
 
   applySettings();
   populateLoginTeachers();
